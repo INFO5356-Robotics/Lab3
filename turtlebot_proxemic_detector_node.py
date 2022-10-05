@@ -1,4 +1,5 @@
 # Import the necessary libraries
+from distutils import dist
 import rclpy                                    # Python library for ROS 2
 from rclpy.node import Node                     # Handles the creation of nodes
 from sensor_msgs.msg import Image               # Image is the message type
@@ -52,7 +53,13 @@ class ProxemicDetection(Node):
             '/color/preview/image',
             self.rgb_callback,
             10
+        )
 
+        self.rgb_subscription = self.create_subscription(
+            Image,
+            '/color/preview/image',
+            self.rgb_callback,
+            10
         )
         
         # Depth Variables
@@ -131,34 +138,32 @@ class ProxemicDetection(Node):
         self.curr_state = ... # track current state
         self.next_state = ... # track next state
         '''
-        x = 10.0
-        z = 60.0 
 
-        
-        if(self.curr_state == self.state1): #start 
+        '''
+        if(self.curr_state == self.state1):
             # Do something
-            pass
+
             # Condition to next stat
-        elif(self.curr_state == self.state2): #rotate
+        elif(self.curr_state == self.state2):
             # Do something
-            self.move_robot(0.0,z,True)
+
             # Condition to next state
-        elif(self.curr_state == self.state3): #move_robot
+        elif(self.curr_state == self.state3):
             # Do something
-            self.move_robot(x,z,True)
+
             # Condition to next state
-        elif(self.curr_state == self.state4): #alert_user
+        elif(self.curr_state == self.state4):
             # Do something
-            self.robot_talker(f"I see a {self.color} thing in intimate zone")
+
             # Condition to next state
-        elif(self.curr_state == self.state5): #end
+        elif(self.curr_state == self.state5):
             # Do something
-            pass
+
             # Condition to next state
         
         # Advance to next state
         self.curr_state = self.next_state
-        
+        '''
 
     def rgb_callback(self, msg):
         """Convert ROS RGB sensor_msgs to opencv image
@@ -349,46 +354,33 @@ class ProxemicDetection(Node):
             mean depth distance to object
         """
         # Initialize variabes
-        # @Ken Do we pick a color ourselves? 
-        selected_color = self.color #color to detect. String
-        bboxes = self.bboxes[selected_color] #bounding boxes 
         selected_bbox = []
         distance_to_object = None
-        # @Ken i don't understand which velocity we're referring to here
-        x = 0.0 #linear x velocity??? 
+        bbox_img_patch_mean = []
+        x = 0.0
 
         # Process image data to detect nearby objects; set distance_to_object
-        # Compute to average depth pixel distance to nearby objects
-        for box in bboxes:
-            selected_bbox.append(box)
-            imgpatch = self.extract_image_patch(self.depth_image, box)
-            if imgpatch is not None:
-                selected_bbox = box
-                distance_to_object = np.mean(np.array(imgpatch))
-
-                if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']:
-                    self.selected_zone = 'intimate'
-                    self.curr_state = self.state4 # state 'alert user'
-                    # self.robot_talker(f"{selected_color} object is in intimate zone")
-                elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
-                    self.selected_zone = 'public'
-                    self.robot_talker(f"{selected_color} object is in public zone")
-
-            else:
-                print("NO bounding boxes found")
-                return(None,None,None)
-
+        for color in ['red', 'green', 'blue']:
+            for bbox in self.bboxes[color]:
+                resized_img = cv2.resize(self.depth_image, (self.rgb_image.shape[0], self.rgb_image.shape[1]))
+                img_patch = self.extract_image_patch(self.depth_image, bbox)
+                
+                # Compute to average depth pixel distance to nearby objects
+                if img_patch is not None:
+                    img_patch_mean = np.mean(np.array(img_patch))
+                    bbox_img_patch_mean.append(img_patch_mean)
         
-    
-        
-        # @Ken Are we returning all of the selected bboxes here?
-        # (e.g. red had four bounding boxes, then return all of them?)
-        return x, selected_bbox, distance_to_object
-
-
-
-
         # Use min distance to detect proximitis zones
+        distance_to_object = min(bbox_img_patch_mean)
+        if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']:
+            self.selected_zone = 'intimate'
+            self.curr_state = self.state4 # state 'alert user'
+            # self.robot_talker(f"{selected_color} object is in intimate zone")
+        elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
+            self.selected_zone = 'public'
+            #self.robot_talker(f"{selected_color} object is in public zone")
+        
+        return x, selected_bbox, distance_to_object
 
     def update_robot_position(self, x, z, bbox, buffer=10):
         """Update the robot's position based on location of bounding box.
