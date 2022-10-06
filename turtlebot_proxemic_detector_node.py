@@ -57,8 +57,8 @@ class ProxemicDetection(Node):
 
         self.rgb_subscription = self.create_subscription(
             Image,
-            '/color/preview/image',
-            self.rgb_callback,
+            '/stereo/depth',
+            self.depth_callback,
             10
         )
         
@@ -362,7 +362,7 @@ class ProxemicDetection(Node):
         # Process image data to detect nearby objects; set distance_to_object
         for color in ['red', 'green', 'blue']:
             for bbox in self.bboxes[color]:
-                resized_img = cv2.resize(self.depth_image, (self.rgb_image.shape[0], self.rgb_image.shape[1]))
+                #resized_img = cv2.resize(self.depth_image, (self.rgb_image.shape[0], self.rgb_image.shape[1]))
                 img_patch = self.extract_image_patch(self.depth_image, bbox)
                 
                 # Compute to average depth pixel distance to nearby objects
@@ -371,16 +371,20 @@ class ProxemicDetection(Node):
                     bbox_img_patch_mean.append(img_patch_mean)
         
         # Use min distance to detect proximitis zones
-        distance_to_object = min(bbox_img_patch_mean)
+        if bbox_img_patch_mean != []:
+            distance_to_object = min(bbox_img_patch_mean)
+        else:
+            distance_to_object = -1
+        
         if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']:
             self.selected_zone = 'intimate'
             self.curr_state = self.state4 # state 'alert user'
-            # self.robot_talker(f"{selected_color} object is in intimate zone")
+            self.robot_talker(f"Object is in intimate zone")
         elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
             self.selected_zone = 'public'
-            #self.robot_talker(f"{selected_color} object is in public zone")
-        
-        return x, selected_bbox, distance_to_object
+            self.robot_talker(f"Object is in public zone")
+            
+        return selected_bbox, distance_to_object
 
     def update_robot_position(self, x, z, bbox, buffer=10):
         """Update the robot's position based on location of bounding box.
