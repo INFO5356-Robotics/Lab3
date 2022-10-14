@@ -132,38 +132,58 @@ class ProxemicDetection(Node):
         # Detect the distance to objects
         selected_bbox, distance_to_object = self.detection_object_distance()
         # Initialize variables
-        '''
-        x = ... # linear
-        z = ... # angular in degrees
-        self.curr_state = ... # track current state
-        self.next_state = ... # track next state
-        '''
+    def update_state_machine(self):
+        """Add Comments
+        ----------
+        Returns
+        -------
+        """
+        # Detect the distance to objects
+        selected_bbox, distance_to_object = self.detection_object_distance()
+        # Initialize variables
+        
+        x = 0.0 # linear
+        z = 1.0 # angular in degrees
+        self.curr_state = self.state1 # track current state
+        self.next_state = None # track next state
 
-        '''
         if(self.curr_state == self.state1):
             # Do something
-
-            # Condition to next stat
+            print("This state does nothing just moves onto state 2")
+            # Condition to next state
+            self.next_state = self.state2
         elif(self.curr_state == self.state2):
             # Do something
-
             # Condition to next state
+            if(): # If found object move onto the next state and stop turning the robot else keep spinning till you find something
+                self.next_state = self.state3
+            else:
+                move_robot(x, y, True)
         elif(self.curr_state == self.state3):
             # Do something
-
+            if self.close_object is not None: # If the object does not exist then move onto the next 
+                self.next_state = self.state4
+            else:
+                self.move_robot(0.5, 0) # Have robot move towards object
             # Condition to next state
         elif(self.curr_state == self.state4):
             # Do something
+            self.move_robot(0, 0) # Stop the robot from moving
 
-            # Condition to next state
+            if self.close_object == "intimate":
+                self.robot_talker("You entered an intimate proximity zone, rate your comfort level")
+            if self.close_object = 'public':
+                self.robot_talker("You entered a public proximity zone, rate your comfort level")
+            
+            self.next_state = self.state5
+
         elif(self.curr_state == self.state5):
             # Do something
-
+            print("NOTHING HAPPENS IN THIS STATE")
             # Condition to next state
         
         # Advance to next state
         self.curr_state = self.next_state
-        '''
 
     def rgb_callback(self, msg):
         """Convert ROS RGB sensor_msgs to opencv image
