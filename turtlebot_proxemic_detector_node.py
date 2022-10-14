@@ -55,12 +55,12 @@ class ProxemicDetection(Node):
             10
         )
 
-        self.rgb_subscription = self.create_subscription(
-            Image,
-            '/stereo/depth',
-            self.depth_callback,
-            10
-        )
+        #self.rgb_subscription = self.create_subscription(
+        #    Image,
+        #    '/stereo/depth',
+        #    self.depth_callback,
+        #    10
+        #)
         
         # Depth Variables
         self.depth_image = None
@@ -146,13 +146,14 @@ class ProxemicDetection(Node):
         elif(self.curr_state == self.state2):
             # Do something
             # Condition to next state
-            if(): # If found object move onto the next state and stop turning the robot else keep spinning till you find something
+            if selected_bbox is not None: # If found object move onto the next state and stop turning the robot else keep spinning till you find something
                 self.next_state = self.state3
             else:
                 move_robot(x, y, True)
         elif(self.curr_state == self.state3):
             # Do something
-            if self.close_object is not None: # If the object does not exist then move onto the next 
+            #if self.close_object is not None: # If the object does not exist then move onto the next 
+            if self.close_object is not None: 
                 self.next_state = self.state4
             else:
                 self.move_robot(0.5, 0) # Have robot move towards object
@@ -160,10 +161,10 @@ class ProxemicDetection(Node):
         elif(self.curr_state == self.state4):
             # Do something
             self.move_robot(0, 0) # Stop the robot from moving
-
-            if self.close_object == "intimate":
+            
+            if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']: # Distance to object 
                 self.robot_talker("You entered an intimate proximity zone, rate your comfort level")
-            if self.close_object = 'public':
+            elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
                 self.robot_talker("You entered a public proximity zone, rate your comfort level")
             
             self.next_state = self.state5
@@ -175,6 +176,7 @@ class ProxemicDetection(Node):
         
         # Advance to next state
         self.curr_state = self.next_state
+        
 
     def rgb_callback(self, msg):
         """Convert ROS RGB sensor_msgs to opencv image
