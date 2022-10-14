@@ -132,15 +132,6 @@ class ProxemicDetection(Node):
         # Detect the distance to objects
         selected_bbox, distance_to_object = self.detection_object_distance()
         # Initialize variables
-    def update_state_machine(self):
-        """Add Comments
-        ----------
-        Returns
-        -------
-        """
-        # Detect the distance to objects
-        selected_bbox, distance_to_object = self.detection_object_distance()
-        # Initialize variables
         
         x = 0.0 # linear
         z = 1.0 # angular in degrees
