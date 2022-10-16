@@ -149,7 +149,7 @@ class ProxemicDetection(Node):
             if selected_bbox != []: # If found object move onto the next state and stop turning the robot else keep spinning till you find something
                 self.next_state = self.state3
             else:
-                move_robot(x, y, True)
+                move_robot(x, z, True)
         elif(self.curr_state == self.state3):
             # Do something
             #if self.close_object is not None: # If the object does not exist then move onto the next 
