@@ -72,7 +72,7 @@ class ProxemicDetection(Node):
         '''
         self.depth_subscription = self.create_subscription(
             Image,
-            '/streo/depth',
+            '/stereo/depth',
             self.depth_callback,
             10
         )
@@ -146,12 +146,17 @@ class ProxemicDetection(Node):
         elif(self.curr_state == self.state2):
             # Do something
             # Condition to next state
+            print("state 2")
+            print(selected_bbox)
+            selected_bbox, distance_to_object = self.detection_object_distance()
+            print(selected_bbox)
             if selected_bbox != []: # If found object move onto the next state and stop turning the robot else keep spinning till you find something
                 self.next_state = self.state3
             else:
-                move_robot(x, z, True)
+                self.move_robot(x, z, True)
         elif(self.curr_state == self.state3):
             # Do something
+            print("state 3") 
             #if self.close_object is not None: # If the object does not exist then move onto the next 
             if distance_to_object != None: 
                 self.next_state = self.state4
@@ -160,6 +165,7 @@ class ProxemicDetection(Node):
             # Condition to next state
         elif(self.curr_state == self.state4):
             # Do something
+            print("state 4")
             self.move_robot(0, 0) # Stop the robot from moving
             
             if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']: # Distance to object 
@@ -171,6 +177,7 @@ class ProxemicDetection(Node):
 
         elif(self.curr_state == self.state5):
             # Do something
+            print("state 5")
             print("NOTHING HAPPENS IN THIS STATE")
             # Condition to next state
         
@@ -382,12 +389,24 @@ class ProxemicDetection(Node):
                 if img_patch is not None:
                     img_patch_mean = np.mean(np.array(img_patch))
                     bbox_img_patch_mean.append(img_patch_mean)
+                    if bbox_img_patch_mean != []:    
+                        distance_to_object = min(bbox_img_patch_mean)
+                        #selected_idx = np.argmin(bbox_img_patch_mean)
+                        if img_patch_mean < distance_to_object:
+                            selected_bbox = bbox
+                    else:
+                        distance_to_object = -1
         
         # Use min distance to detect proximitis zones
-        if bbox_img_patch_mean != []:
-            distance_to_object = min(bbox_img_patch_mean)
-        else:
-            distance_to_object = -1
+        #if bbox_img_patch_mean != []:
+        #    distance_to_object = min(bbox_img_patch_mean)
+        #    selected_idx = np.argmin(bbox_img_patch_mean)
+        #    for color in ['red', 'green', 'blue']:
+        #        for index in range(len(self.bboxes[color])):
+        #            if index == selected_idx:
+        #                selected_bbox = self.bboxes[index][selected_idx]
+        #else:
+        #    distance_to_object = -1
         
         if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']:
             self.selected_zone = 'intimate'
