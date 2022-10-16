@@ -135,8 +135,8 @@ class ProxemicDetection(Node):
         
         x = 0.0 # linear
         z = 1.0 # angular in degrees
-        self.curr_state = self.state1 # track current state
-        self.next_state = None # track next state
+        #self.curr_state = self.state1 # track current state
+        #self.next_state = None # track next state
 
         if(self.curr_state == self.state1):
             # Do something
