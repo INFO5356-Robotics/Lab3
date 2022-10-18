@@ -377,6 +377,7 @@ class ProxemicDetection(Node):
         selected_bbox = []
         distance_to_object = None
         bbox_img_patch_mean = []
+        temp_bboxes = []
         x = 0.0
 
         # Process image data to detect nearby objects; set distance_to_object
@@ -389,14 +390,15 @@ class ProxemicDetection(Node):
                 if img_patch is not None:
                     img_patch_mean = np.mean(np.array(img_patch))
                     bbox_img_patch_mean.append(img_patch_mean)
-                    if bbox_img_patch_mean != []:    
+                    temp_bboxes.append(bbox)
+                    if bbox_img_patch_mean != []:
                         distance_to_object = min(bbox_img_patch_mean)
-                        #selected_idx = np.argmin(bbox_img_patch_mean)
+                        selected_idx = np.argmin(bbox_img_patch_mean)
                         if img_patch_mean < distance_to_object:
                             selected_bbox = bbox
                     else:
                         distance_to_object = -1
-        
+            
         # Use min distance to detect proximitis zones
         #if bbox_img_patch_mean != []:
         #    distance_to_object = min(bbox_img_patch_mean)
@@ -412,10 +414,11 @@ class ProxemicDetection(Node):
             self.selected_zone = 'intimate'
             self.curr_state = self.state4 # state 'alert user'
             self.robot_talker(f"Object is in intimate zone")
+            selected_bbox = temp_bboxes[selected_idx]
         elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
             self.selected_zone = 'public'
             self.robot_talker(f"Object is in public zone")
-            
+            selected_bbox = temp_bboxes[selected_idx]
         return selected_bbox, distance_to_object
 
     def update_robot_position(self, x, z, bbox, buffer=10):
