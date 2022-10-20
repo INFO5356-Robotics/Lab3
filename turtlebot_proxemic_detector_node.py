@@ -1,6 +1,5 @@
 # Import the necessary libraries
 from distutils import dist
-from select import select
 import rclpy                                    # Python library for ROS 2
 from rclpy.node import Node                     # Handles the creation of nodes
 from sensor_msgs.msg import Image               # Image is the message type
@@ -123,8 +122,6 @@ class ProxemicDetection(Node):
             self.movement_pub.publish(self.move_cmd)
             t1 = self.get_clock().now().seconds_nanoseconds()[0]
             current_angle = angular_speed*(t1-t0)
-        # if z == 0:
-        #     self.movement_pub.publish(self.move_cmd)
 
     def update_state_machine(self):
         """Add Comments
@@ -149,34 +146,28 @@ class ProxemicDetection(Node):
         elif(self.curr_state == self.state2):
             # Do something
             # Condition to next state
-            print("state 2: rotate")
+            print("state 2")
             print(selected_bbox)
             selected_bbox, distance_to_object = self.detection_object_distance()
             print(selected_bbox)
-            if len(selected_bbox) != 0: # If found object move onto the next state and stop turning the robot else keep spinning till you find something
-                print('state3 starting', selected_bbox)
+            if selected_bbox != []: # If found object move onto the next state and stop turning the robot else keep spinning till you find something
                 self.next_state = self.state3
             else:
-                print('state2 detected nothing')
-                print(selected_bbox)
-                # self.move_robot(x=0.0, z=1.0, clockwise=True)
                 self.move_robot(x, z, True)
         elif(self.curr_state == self.state3):
             # Do something
             print("state 3") 
             #if self.close_object is not None: # If the object does not exist then move onto the next 
-            if len(selected_bbox) != 0:
-                self.update_robot_position(0.1,0.1, selected_bbox)
-                self.move_robot(0.5, 0.0) # Have robot move towards object
-            if distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']: 
-                print('reached the intimate zone, over to 4')
+            if distance_to_object != None: 
                 self.next_state = self.state4
-                
+            else:
+                self.move_robot(0.5, 0) # Have robot move towards object
             # Condition to next state
         elif(self.curr_state == self.state4):
             # Do something
             print("state 4")
             self.move_robot(0, 0) # Stop the robot from moving
+            
             if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']: # Distance to object 
                 self.robot_talker("You entered an intimate proximity zone, rate your comfort level")
             elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
@@ -281,10 +272,9 @@ class ProxemicDetection(Node):
         # Generate color blob contours and draw boxes around them on image
         for pic, contour in enumerate(contours):
             area = cv2.contourArea(contour)
-            # if(area > 300):
-            if(area>100):
+            if(area > 300):
                 x, y, w, h = cv2.boundingRect(contour)
-                if(w < 50//2 or w > min_width*2): continue
+                if(w < 50 or w > min_width): continue
                 bounding_boxes[color].append([x, y, w, h])
                 img = cv2.rectangle(img, (x, y), 
                                         (x + w, y + h), 
@@ -327,8 +317,7 @@ class ProxemicDetection(Node):
         # Set range for red color and define mask
         if(color == 'red' or color is None):
             red_lower = np.array([136, 87, 111], np.uint8)
-            # red_upper = np.array([180, 255, 255], np.uint8)
-            red_upper = np.array([17, 141, 255], np.uint8)
+            red_upper = np.array([180, 255, 255], np.uint8)
             filter = (0, 0, 255)
             img, hsvFrame, bounding_boxes, kernal = self.color_detection(img, 
                                                                     hsvFrame, 
@@ -388,49 +377,32 @@ class ProxemicDetection(Node):
         selected_bbox = []
         distance_to_object = None
         bbox_img_patch_mean = []
-        temp_bboxes = []
         x = 0.0
 
         # Process image data to detect nearby objects; set distance_to_object
         for color in ['red', 'green', 'blue']:
             for bbox in self.bboxes[color]:
-                #resized_img = cv2.resize(self.depth_image, (self.rgb_image.shape[0], self.rgb_image.shape[1]))
                 img_patch = self.extract_image_patch(self.depth_image, bbox)
                 
                 # Compute to average depth pixel distance to nearby objects
-                if img_patch is not None:
-                    img_patch_mean = np.mean(np.array(img_patch))
-                    bbox_img_patch_mean.append(img_patch_mean)
-                    temp_bboxes.append(bbox)
-                    #if bbox_img_patch_mean != []:
-                    distance_to_object = min(bbox_img_patch_mean)
-                    selected_idx = np.argmin(bbox_img_patch_mean)
-                    if img_patch_mean < distance_to_object:
-                        selected_bbox = bbox
-            
-        # Use min distance to detect proximitis zones
-        #if bbox_img_patch_mean != []:
-        #    distance_to_object = min(bbox_img_patch_mean)
-        #    selected_idx = np.argmin(bbox_img_patch_mean)
-        #    for color in ['red', 'green', 'blue']:
-        #        for index in range(len(self.bboxes[color])):
-        #            if index == selected_idx:
-        #                selected_bbox = self.bboxes[index][selected_idx]
-        #else:
-        #    distance_to_object = -1
-
-        if distance_to_object == None: 
-                distance_to_object = 1e20
+                #if img_patch is not None:
+                img_patch_mean = np.mean(np.array(img_patch))
+                bbox_img_patch_mean.append(img_patch_mean)
+                #if bbox_img_patch_mean != []:    
+                distance_to_object = min(bbox_img_patch_mean)
+                #selected_idx = np.argmin(bbox_img_patch_mean)
+                if img_patch_mean < distance_to_object:
+                	distance_to_object = img_patch_mean
+                       selected_bbox = bbox
         
         if self.proxemic_ranges['intimate_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['intimate_depth_threshold_max']:
             self.selected_zone = 'intimate'
-            # self.curr_state = self.state4 # state 'alert user'
-            # self.robot_talker(f"Object is in intimate zone")
-            selected_bbox = temp_bboxes[selected_idx]
+            self.curr_state = self.state4 # state 'alert user'
+            self.robot_talker(f"Object is in intimate zone")
         elif self.proxemic_ranges['public_depth_threshold_min'] <= distance_to_object <= self.proxemic_ranges['public_depth_threshold_max']:
             self.selected_zone = 'public'
             self.robot_talker(f"Object is in public zone")
-            selected_bbox = temp_bboxes[selected_idx]
+            
         return selected_bbox, distance_to_object
 
     def update_robot_position(self, x, z, bbox, buffer=10):
@@ -455,18 +427,8 @@ class ProxemicDetection(Node):
         box_center_line = bbox[0]+bbox[2]/2
 
         # if box on right of center
-
-        if img_center_line - buffer >= box_center_line and img_center_line + buffer <= box_center_line:
-            z = 0
-
-         # elif box on left of center
-        elif img_center_line - buffer > box_center_line:
-            z = -z 
-       
+        # elif box on left of center
         # else forward
-        self.move_robot(x,z)
-
-
 
     def extract_image_patch(self, image, bbox, patch_shape=(20,20)):
         """Extract image patch from bounding box.
@@ -546,14 +508,10 @@ def main(args=None):
     # User set parameters
     display=True
     color=None # Options include 'red', 'green', 'blue', or None for all colors
-    # proxemic_ranges = {'intimate_depth_threshold_min':10,
-    #                     'intimate_depth_threshold_max':20,
-    #                     'public_depth_threshold_min':50,
-    #                     'public_depth_threshold_max':60}
-    proxemic_ranges = {'intimate_depth_threshold_min':100,
-                        'intimate_depth_threshold_max':400,
-                        'public_depth_threshold_min':1000,
-                        'public_depth_threshold_max':2000}
+    proxemic_ranges = {'intimate_depth_threshold_min':10,
+                        'intimate_depth_threshold_max':20,
+                        'public_depth_threshold_min':50,
+                        'public_depth_threshold_max':60}
     selected_zone = 'intimate' # 'public' or 'intimate'
     robot_speed = 15 # meters per second
 
