@@ -402,13 +402,11 @@ class ProxemicDetection(Node):
                     img_patch_mean = np.mean(np.array(img_patch))
                     bbox_img_patch_mean.append(img_patch_mean)
                     temp_bboxes.append(bbox)
-                    if bbox_img_patch_mean != []:
-                        distance_to_object = min(bbox_img_patch_mean)
-                        selected_idx = np.argmin(bbox_img_patch_mean)
-                        if img_patch_mean < distance_to_object:
-                            selected_bbox = bbox
-                    else:
-                        distance_to_object = -1
+                    #if bbox_img_patch_mean != []:
+                    distance_to_object = min(bbox_img_patch_mean)
+                    selected_idx = np.argmin(bbox_img_patch_mean)
+                    if img_patch_mean < distance_to_object:
+                        selected_bbox = bbox
             
         # Use min distance to detect proximitis zones
         #if bbox_img_patch_mean != []:
